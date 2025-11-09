@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>FinTrust MF Calculators</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    --green-dark:#2e7d32;
+    --green-light:#9ccc65;
+    --black-fill:#000;
+    --bar-bg:#e0e0e0;
+    --label-bg:#ebebeb;
+    --header-bg:#bde8b3;
+    --footer-bg:#f9f9f9;
+    --divider:#e6e6e6;
+  }
+
+  /* --- Global / mobile zoom prevention --- */
+  html, body { -webkit-text-size-adjust:100%; touch-action: manipulation; margin:0; }
+  body { background:#f7f7f7; font-family:"Segoe UI", Roboto, Arial, sans-serif; color:#222; }
+
+  /* --- Container --- */
+  .app {
+    max-width:420px;
+    margin:12px auto;
+    padding:0 8px;
+  }
+
+/* --- Logo + Heading same line --- */
+.topbar {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
+  justify-content:flex-start;
+}
+.topbar a.logo-link { display:inline-flex; align-items:center; text-decoration:none; }
+.topbar img.logo-img { height:56px; width:auto; border-radius:6px; display:block; }
+.top-title { font-size:18px; font-weight:700; color:#2e7d32; }
+
+  /* --- Tabs --- */
+  .tabs {
+    display:flex;
+    gap:6px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .tab-btn {
+    padding:8px 10px;
+    border-radius:8px;
+    background:#fff;
+    border:1px solid #e6e6e6;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+    flex:1;
+    text-align:center;
+  }
+  .tab-btn.active { background:linear-gradient(90deg,#eaf6e6,#f3fff3); border-color:#cfe8c8; }
+
+  /* --- Planner card (shared style used by each tab content) --- */
+  .card {
+    background:#fff;
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    overflow:hidden;
+    margin-bottom:12px;
+  }
+  .card .header {
+    display:flex;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #eaeaea;
+  }
+  .card .header h2 { margin:0;font-size:16px;font-weight:500;color:#222;flex:1; }
+  .fields{ padding:14px; }
+  .field{ padding:12px 0;border-bottom:1px solid #f3f3f3; }
+  .field label{ display:block; margin-bottom:8px; color:#333; font-size:13px; font-weight:600; }
+  .input-group{ display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #d2d2d2; border-radius:6px; overflow:hidden; }
+  .input-group span{ background:var(--label-bg); color:#333; padding:9px 14px; font-weight:600; font-size:14px; min-width:44px; text-align:center; }
+  .input-group input[type="number"], .input-group input[type="text"], select { border:0; width:100%; font-size:16px; padding:8px; outline:none; -moz-appearance:textfield; color:#222; font-weight:500; }
+
+  /* slider visuals: filled portion black, remaining light grey; thumb black */
+ .range{ width:100%; height:10px; margin-top:12px; -webkit-appearance:none; appearance:none; border-radius:5px;
+    background:linear-gradient(to right, #000 0%, #e0e0e0 0%); outline:none; transition:background 0.12s linear; }
+  .range::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#4caf50; border:3px solid #fff; cursor:pointer; margin-top:-2px; box-shadow:0 0 8px rgba(0,0,0,0.35);  }
+
+  .result-header{ background:var(--header-bg); text-align:center; color:#224; padding:14px; font-size:16px; font-weight:600; position:relative; }
+  .reset-btn{ display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); background:var(--green-dark); color:#fff; border:none; border-radius:5px; padding:6px 10px; font-size:12px; cursor:pointer; }
+
+  .result { text-align:left; font-size:16px; color:#000; }
+  .result-row { padding:16px 20px; border-bottom:1px solid var(--divider); }
+  .result-row .label { color:#333; font-weight:600; display:block; }
+  .result-row .value { font-size:22px; font-weight:700; color:#000; display:block; margin-top:6px; }
+
+  .chart-section { padding:18px 0; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5; text-align:center; background:#fff; }
+  .chart-container { width:250px; height:230px; margin:0 auto; position:relative; }
+  .chart-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; font-size:15px; color:#000; font-weight:600; pointer-events:none; }
+  .chart-legend { margin-top:8px; display:flex; justify-content:center; gap:14px; font-size:13px; color:#333; }
+  .legend-box { display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:middle; border-radius:3px; }
+
+  .table-wrapper{ margin:12px 14px 18px; border-radius:8px; border:1px solid #eee; max-height:250px; overflow:auto; display:block; }
+  table{ width:100%; border-collapse:collapse; min-width:600px; }
+  th,td{ padding:8px 10px; border-bottom:1px solid #f1f1f1; text-align:center; font-size:13px; }
+  th{ background:#fafafa; font-weight:700; color:#333; position:sticky; top:0; z-index:2; }
+
+  .card-footer{ font-size:11px; color:#333; padding:12px; background:var(--footer-bg); border-top:1px solid #ccc; text-align:justify; line-height:1.45; }
+  .copyright{ text-align:center; margin-top:6px; font-size:11px; color:#333; font-weight:500; }
+
+  /* responsive tweak */
+  @media (max-width:420px){
+    .app{ padding:0 6px; }
+    .field { padding:10px 10px; }
+    table { min-width:480px; }
+    .topbar { justify-content:center; flex-wrap:wrap; text-align:center; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 🔧 LOGO + HEADING (Editable by buyer) -->
+  <div class="topbar">
+    <!-- Replace href and src with buyer's website and logo path -->
+    <a class="logo-link" href="https://fintrustmf.com" target="_blank" title="FinTrust MF">
+      <!-- Example: use PNG/SVG hosted on your server / CDN -->
+      <img class="logo-img" src="https://i.postimg.cc/nzfLqfJN/IMG-4425.jpg?text=FinTrust+MF" alt="FinTrust MF Logo">
+    </a>
+    <div class="top-title">FinTrust MF 4-in-1 Investment Planner</div>
+  </div>
+  <!-- 🔧 END LOGO + HEADING -->
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist" aria-label="Calculators" style="justify-content:space-between; flex-wrap:nowrap;">
+    <button class="tab-btn active" data-tab="sip" role="tab" aria-selected="true">SIP</button>
+    <button class="tab-btn" data-tab="lump" role="tab" aria-selected="false">Lumpsum</button>
+    <button class="tab-btn" data-tab="swp" role="tab" aria-selected="false">SWP</button>
+    <button class="tab-btn" data-tab="goal" role="tab" aria-selected="false">Goal</button>
+  </div>
+
+  <!-- ===== SIP Planner ===== -->
+  <div id="sip" class="card tab-content" style="display:block;">
+    <div class="header"><h2>SIP Planner – FinTrust Creations</h2></div>
+    <div class="fields">
+      <div class="field">
+        <label>Monthly SIP (₹)</label>
+        <div class="input-group"><span>₹</span><input type="number" id="sip-sipAmount" value="5000" min="0" /></div>
+        <input id="sip-sipRange" class="range" type="range" min="100" max="100000" step="100" value="5000" />
+      </div>
+      <div class="field">
+        <label>Duration (Years)</label>
+        <div class="input-group"><span>Years</span><input type="number" id="sip-years" value="10" min="1" /></div>
+        <input id="sip-yearsRange" class="range" type="range" min="1" max="40" step="1" value="10" />
+      </div>
+      <div class="field">
+        <label>Expected Return (annual %)</label>
+        <div class="input-group"><span>%</span><input type="number" id="sip-rate" value="12" step="0.1" min="0" /></div>
+        <input id="sip-rateRange" class="range" type="range" min="0.1" max="25" step="0.1" value="12" />
+      </div>
+      <div class="field">
+        <label>Annual Step-up (%)</label>
+        <div class="input-group"><span>%</span><input type="number" id="sip-stepup" value="0" step="0.1" min="0" /></div>
+        <input id="sip-stepupRange" class="range" type="range" min="0" max="50" step="0.5" value="0" />
+      </div>
+    </div>
+
+    <div class="result-header">Your SIP Details <button id="sip-resetBtn" class="reset-btn">Reset</button></div>
+
+    <div class="result" id="sip-results">
+      <div class="result-row"><span class="label">Invested Amount</span><span class="value" id="sip-invested">₹0</span></div>
+      <div class="result-row"><span class="label">Estimated Returns</span><span class="value" id="sip-gain">₹0</span></div>
+      <div class="result-row" style="border-bottom:none;"><span class="label">Maturity Value</span><span class="value" id="sip-future">₹0</span></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="chart-container"><canvas id="sip-plannerChart"></canvas><div class="chart-center"><span class="label">Maturity Value</span><span id="sip-centerVal">₹0</span></div></div>
+      <div class="chart-legend"><span><span class="legend-box" style="background:#2e7d32"></span>Invested</span><span><span class="legend-box" style="background:#9ccc65"></span>Returns</span></div>
+    </div>
+
+    <div class="table-wrapper" id="sip-yearTable"></div>
+    <div class="card-footer">Disclaimer: This calculator provides estimated projections based on inputs. Actual returns may vary depending on market conditions and fund performance. Mutual Fund investments are subject to market risks. Please read scheme documents carefully before investing. <div class="copyright">©️ <span id="sip-year"></span> FinTrust Creations. All Rights Reserved.</div></div>
+  </div>
+
+  <!-- ===== Lumpsum Planner ===== -->
+  <div id="lump" class="card tab-content" style="display:none;">
+    <div class="header"><h2>Lump Sum Calculator – FinTrust Creations</h2></div>
+
+    <div class="fields">
+      <div class="field">
+        <label>Investment Amount</label>
+        <div class="input-group"><span>₹</span><input type="number" id="lump-amount" value="100000" /></div>
+        <input type="range" id="lump-amountRange" class="range" min="10000" max="10000000" step="10000" value="100000">
+      </div>
+
+      <div class="field">
+        <label>Expected Return Rate</label>
+        <div class="input-group"><span>%</span><input type="number" id="lump-rate" value="12" step="0.1"></div>
+        <input type="range" id="lump-rateRange" class="range" min="5" max="20" step="0.1" value="12">
+      </div>
+
+      <div class="field">
+        <label>Investment Duration</label>
+        <div class="input-group"><span>Years</span><input type="number" id="lump-years" value="10"></div>
+        <input type="range" id="lump-yearsRange" class="range" min="1" max="40" step="1" value="10">
+      </div>
+    </div>
+
+    <div class="result-header">Your Lump Sum Details <button id="lump-resetBtn" class="reset-btn">Reset</button></div>
+
+    <div class="result" id="lump-lumpResult"></div>
+
+    <div class="chart-section">
+      <div class="chart-container"><canvas id="lump-lumpChart"></canvas><div class="chart-center" id="lump-chartCenter"></div></div>
+      <div class="chart-legend"><span><span class="legend-box" style="background:#2e7d32"></span>Invested</span><span><span class="legend-box" style="background:#9ccc65"></span>Returns</span></div>
+    </div>
+
+    <div class="table-wrapper" id="lump-lumpYearTable"></div>
+    <div class="card-footer">Disclaimer:This calculator provides estimated projections based on inputs. Actual returns may vary depending on market conditions and fund performance. Mutual Fund investments are subject to market risks. Please read scheme documents carefully before investing. <div class="copyright">©️ <span id="lump-year"></span> FinTrust Creations. All Rights Reserved.</div></div>
+  </div>
+
+  <!-- ===== SWP Planner ===== -->
+  <div id="swp" class="card tab-content" style="display:none;">
+    <div class="header"><h2>SWP Planner – FinTrust Creations</h2></div>
+    <div class="fields">
+      <div class="field">
+        <label>Investment Amount (Lump Sum)</label>
+        <div class="input-group"><span>₹</span><input type="number" id="swp-lumpSum" value="1000000" min="0"/></div>
+        <input id="swp-lumpRange" class="range" type="range" min="10000" max="50000000" step="10000" value="1000000"/>
+      </div>
+      <div class="field">
+        <label>Monthly Withdrawal</label>
+        <div class="input-group"><span>₹</span><input type="number" id="swp-withdrawal" value="10000" min="0"/></div>
+        <input id="swp-withdrawRange" class="range" type="range" min="1000" max="200000" step="500" value="10000"/>
+      </div>
+      <div class="field">
+        <label>Expected Return (annual %)</label>
+        <div class="input-group"><span>%</span><input type="number" id="swp-swpReturn" value="10" step="0.1" min="0"/></div>
+        <input id="swp-returnRange" class="range" type="range" min="0.1" max="25" step="0.1" value="10"/>
+      </div>
+      <div class="field">
+        <label>Duration (Years)</label>
+        <div class="input-group"><span>Yrs</span><input type="number" id="swp-duration" value="10" min="1" step="1"/></div>
+        <input id="swp-durRange" class="range" type="range" min="1" max="40" step="1" value="10"/>
+      </div>
+    </div>
+
+    <div class="result-header">Your SWP Summary <button id="swp-resetBtn" class="reset-btn">Reset</button></div>
+
+    <div class="result" id="swp-swpResult">
+      <div class="result-row"><span class="label">Total Withdrawn</span><span class="value" id="swp-totalWithdrawn">₹0</span></div>
+      <div class="result-row"><span class="label">Remaining Value</span><span class="value" id="swp-remaining">₹0</span></div>
+      <div class="result-row" style="border-bottom:none;"><span class="label">Total Gain</span><span class="value" id="swp-totalGain">₹0</span></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="chart-container"><canvas id="swp-swpChart"></canvas><div class="chart-center"><span class="label">Remaining Value</span><span id="swp-centerVal">₹0</span></div></div>
+      <div class="chart-legend"><span><span class="legend-box" style="background:#2e7d32"></span>Withdrawn</span><span><span class="legend-box" style="background:#9ccc65"></span>Remaining</span></div>
+    </div>
+
+    <div class="table-wrapper" id="swp-yearTable"></div>
+    <div class="card-footer">Disclaimer:This calculator provides estimated projections based on inputs. Actual returns may vary depending on market conditions and fund performance. Mutual Fund investments are subject to market risks. Please read scheme documents carefully before investing.<div class="copyright">©️ <span id="swp-year"></span> FinTrust Creations. All Rights Reserved.</div></div>
+  </div>
+
+  <!-- ===== Goal Planner ===== -->
+  <div id="goal" class="card tab-content" style="display:none;">
+    <div class="header"><h2>Goal Planner – FinTrust Creations</h2></div>
+
+    <div class="fields">
+      <div class="field">
+        <label>Goal Amount (Future Value)</label>
+        <div class="input-group"><span>₹</span><input type="number" id="goal-goalAmount" value="5000000" min="0" /></div>
+        <input id="goal-goalRange" class="range" type="range" min="10000" max="100000000" step="10000" value="5000000" />
+      </div>
+      <div class="field">
+        <label>Years to Goal</label>
+        <div class="input-group"><span>Years</span><input type="number" id="goal-yearsLeft" value="20" min="1" /></div>
+        <input id="goal-yearsRange" class="range" type="range" min="1" max="40" step="1" value="20" />
+      </div>
+      <div class="field">
+        <label>Expected Return (annual %)</label>
+        <div class="input-group"><span>%</span><input type="number" id="goal-expectedReturn" value="12" step="0.1" min="0" /></div>
+        <input id="goal-returnRange" class="range" type="range" min="0.1" max="25" step="0.1" value="12" />
+      </div>
+      <div class="field">
+        <label>Annual Step-up (%)</label>
+        <div class="input-group"><span>%</span><input type="number" id="goal-stepup" value="0" step="0.1" min="0" /></div>
+        <input id="goal-stepupRange" class="range" type="range" min="0" max="50" step="0.5" value="0" />
+      </div>
+    </div>
+
+    <div class="result-header">Your Goal Summary <button id="goal-resetBtn" class="reset-btn">Reset</button></div>
+
+    <div class="result">
+      <div class="result-row"><span class="label">Monthly SIP Required</span><span class="value" id="goal-monthlySIP">₹0</span></div>
+      <div class="result-row"><span class="label">Total Invested</span><span class="value" id="goal-totalInvested">₹0</span></div>
+      <div class="result-row" style="border-bottom:none;"><span class="label">Wealth Created (Gain)</span><span class="value" id="goal-wealthCreated">₹0</span></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="chart-container"><canvas id="goal-goalChart"></canvas><div class="chart-center"><span class="label">Goal Value</span><span id="goal-centerVal">₹0</span></div></div>
+      <div class="chart-legend"><span><span class="legend-box" style="background:#2e7d32"></span>Invested</span><span><span class="legend-box" style="background:#9ccc65"></span>Gain</span></div>
+    </div>
+
+    <div class="table-wrapper" id="goal-yearTable"></div>
+    <div class="card-footer">Disclaimer:This calculator provides estimated projections based on inputs. Actual returns may vary depending on market conditions and fund performance. Mutual Fund investments are subject to market risks. Please read scheme documents carefully before investing. <div class="copyright">©️ <span id="goal-year"></span> FinTrust Creations. All Rights Reserved.</div></div>
+  </div>
+
+</div>
+
+<script>
+/* -----------------------
+   Generic helpers used across planners
+   ----------------------- */
+function toNum(v, fallback=0){ const n=parseFloat(v); return isNaN(n)?fallback:n; }
+function fmtINR(n){ if(!isFinite(n)) n=0; return '\u20B9' + Math.round(n).toLocaleString('en-IN'); }
+function updateRangeBackground(rangeEl){
+  if(!rangeEl) return;
+  const min=toNum(rangeEl.min,0), max=toNum(rangeEl.max,100), val=Math.max(min, Math.min(max, toNum(rangeEl.value, min)));
+  const pct = ((val - min) / (max - min)) * 100;
+  // filled portion black (variable), remaining light grey
+  rangeEl.style.background = `linear-gradient(to right, var(--black-fill) ${pct}%, var(--bar-bg) ${pct}%)`;
+}
+// attach robust events for a range (input/pointer/touch/change)
+function enableRangePainting(rangeEl, handler){
+  updateRangeBackground(rangeEl);
+  rangeEl.addEventListener('input', handler, {passive:true});
+  rangeEl.addEventListener('pointermove', handler, {passive:true});
+  rangeEl.addEventListener('touchmove', handler, {passive:true});
+  rangeEl.addEventListener('change', handler, {passive:true});
+}
+
+/* -----------------------
+   Tab switching
+   ----------------------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected','true');
+    const tab = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-content').forEach(tc=>tc.style.display='none');
+    document.getElementById(tab).style.display='block';
+    try { window.dispatchEvent(new Event('resize')); } catch(e){}
+  });
+});
+
+/* -----------------------
+   Common: set footer years initially
+   ----------------------- */
+(function setFooterYears(){
+  const ids = ['sip-year','lump-year','swp-year','goal-year'];
+  const y = new Date().getFullYear();
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = y;
+  });
+})();
+
+/* -----------------------
+   SIP Planner namespace (sip-*)
+   ----------------------- */
+(function(){
+  const A = id => document.getElementById('sip-' + id);
+  const sipAmount = A('sipAmount'), sipRange = A('sipRange');
+  const years = A('years'), yearsRange = A('yearsRange');
+  const rate = A('rate'), rateRange = A('rateRange');
+  const stepup = A('stepup'), stepupRange = A('stepupRange');
+  const investedEl = A('invested'), gainEl = A('gain'), futureEl = A('future'), centerVal = A('centerVal');
+  const yearTable = document.getElementById('sip-yearTable');
+  const resetBtn = A('resetBtn');
+
+  // defaults
+  const defaults = { sip:5000, yrs:10, rate:12, step:0 };
+
+  // chart
+  const ctx = document.getElementById('sip-plannerChart').getContext('2d');
+  const chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Invested','Returns'], datasets:[{ data:[0,0], backgroundColor:['#2e7d32','#9ccc65'], borderColor:'#fff', borderWidth:2 }] }, options:{ cutout:'70%', plugins:{legend:{display:false}}, maintainAspectRatio:false } });
+
+  function calculateAndRender(){
+    const baseMonthly = Math.max(0, toNum(sipAmount.value, 0));
+    const yrs = Math.max(1, Math.floor(toNum(years.value,1)));
+    const annualRate = Math.max(0, toNum(rate.value,0))/100;
+    const stepRate = Math.max(0, toNum(stepup.value,0))/100;
+    const monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
+    let invested = 0, future = 0, table=[];
+    for(let y=1;y<=yrs;y++){
+      const monthlyThisYear = baseMonthly * Math.pow(1 + stepRate, y - 1);
+      for(let m=1;m<=12;m++){
+        future = (future + monthlyThisYear) * (1 + monthlyRate);
+        invested += monthlyThisYear;
+      }
+      table.push({ year: y, invested: Math.round(invested), future: Math.round(future), gain: Math.round(future - invested) });
+    }
+    const last = table[table.length - 1] || { invested:0, future:0, gain:0 };
+    investedEl.textContent = fmtINR(last.invested);
+    gainEl.textContent = fmtINR(last.gain);
+    futureEl.textContent = fmtINR(last.future);
+    centerVal.textContent = fmtINR(last.future);
+    chart.data.datasets[0].data = [ last.invested > 0 ? last.invested : 0, last.gain > 0 ? last.gain : 0 ];
+    chart.update();
+
+    // render table
+    let html = '<table><thead><tr><th>Year</th><th>Invested (₹)</th><th>Future Value (₹)</th><th>Gain (₹)</th></tr></thead><tbody>';
+    for(const r of table) html += `<tr><td>${r.year}</td><td>${r.invested.toLocaleString('en-IN')}</td><td>${r.future.toLocaleString('en-IN')}</td><td>${r.gain.toLocaleString('en-IN')}</td></tr>`;
+    html += '</tbody></table>';
+    yearTable.innerHTML = html;
+  }
+
+  // sync handlers
+  function onRangeChange(e){
+    const r = e.currentTarget;
+    updateRangeBackground(r);
+    if(r === sipRange) sipAmount.value = r.value;
+    if(r === yearsRange) years.value = r.value;
+    if(r === rateRange) rate.value = r.value;
+    if(r === stepupRange) stepup.value = r.value;
+    calculateAndRender();
+    showHideResetForPlanner('sip');
+  }
+  enableRangePainting(sipRange, onRangeChange);
+  enableRangePainting(yearsRange, onRangeChange);
+  enableRangePainting(rateRange, onRangeChange);
+  enableRangePainting(stepupRange, onRangeChange);
+
+  [sipAmount, years, rate, stepup].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if(el === sipAmount) sipRange.value = el.value || 0;
+      if(el === years) yearsRange.value = el.value || 1;
+      if(el === rate) rateRange.value = el.value || 0.1;
+      if(el === stepup) stepupRange.value = el.value || 0;
+      document.querySelectorAll('#sip .range').forEach(updateRangeBackground);
+      calculateAndRender();
+      showHideResetForPlanner('sip');
+    });
+  });
+
+  // reset
+  if(resetBtn){
+    resetBtn.addEventListener('click', ()=>{
+      sipAmount.value = defaults.sip; years.value = defaults.yrs; rate.value = defaults.rate; stepup.value = defaults.step;
+      sipRange.value = defaults.sip; yearsRange.value = defaults.yrs; rateRange.value = defaults.rate; stepupRange.value = defaults.step;
+      document.querySelectorAll('#sip .range').forEach(updateRangeBackground);
+      calculateAndRender();
+      showHideResetForPlanner('sip'); // will hide
+    });
+  }
+
+  document.getElementById('sip-year').innerText = new Date().getFullYear();
+  // initial paint
+  document.querySelectorAll('#sip .range').forEach(updateRangeBackground);
+  calculateAndRender();
+})();
+
+/* -----------------------
+   SWP Planner namespace (swp-*)
+   ----------------------- */
+(function(){
+  const get = id => document.getElementById('swp-' + id);
+  const lumpSum = get('lumpSum'), lumpRange = get('lumpRange');
+  const withdrawal = get('withdrawal'), withdrawRange = get('withdrawRange');
+  const swpReturn = get('swpReturn'), returnRange = get('returnRange');
+  const duration = get('duration'), durRange = get('durRange');
+  const totalWithdrawnEl = get('totalWithdrawn'), remainingEl = get('remaining'), totalGainEl = get('totalGain'), centerVal = get('centerVal');
+  const yearTable = document.getElementById('swp-yearTable');
+  const resetBtn = get('resetBtn');
+
+  const defaults = { lump:1000000, withdraw:10000, ret:10, dur:10 };
+
+  const ctx = document.getElementById('swp-swpChart').getContext('2d');
+  const chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Withdrawn','Remaining'], datasets:[{ data:[0,0], backgroundColor:['#2e7d32','#9ccc65'], borderColor:'#fff', borderWidth:2 }] }, options:{ cutout:'70%', plugins:{legend:{display:false}}, maintainAspectRatio:false } });
+
+  function calculate(){
+    const P=toNum(lumpSum.value,0),W=toNum(withdrawal.value,0),R=toNum(swpReturn.value,0)/100,D=Math.max(1,Math.floor(toNum(duration.value,1)));
+    const mRate=Math.pow(1+R,1/12)-1, months=D*12;
+    let rem=P,totalW=0,rows=[];
+    for(let i=1;i<=months;i++){
+      rem *= 1 + mRate;
+      const wNow = Math.min(W, rem);
+      rem -= wNow; totalW += wNow;
+      if(i%12===0) rows.push({ yr:i/12, w:totalW, rem:Math.max(0,rem), gain:Math.max(0,rem)+totalW-P });
+      if(rem<=0) break;
+    }
+    const gain = Math.max(0,rem)+totalW-P;
+    totalWithdrawnEl.textContent = fmtINR(totalW);
+    remainingEl.textContent = fmtINR(Math.max(0,rem));
+    totalGainEl.textContent = fmtINR(gain);
+    centerVal.textContent = fmtINR(Math.max(0,rem));
+    chart.data.datasets[0].data = [ totalW, Math.max(0, rem) ];
+    chart.update();
+
+    // table
+    let html='<table><thead><tr><th>Year</th><th>Withdrawn (₹)</th><th>Remaining Value (₹)</th><th>Gain (₹)</th></tr></thead><tbody>';
+    rows.forEach(r=>{ html+=`<tr><td>${r.yr}</td><td>₹${Math.round(r.w).toLocaleString('en-IN')}</td><td>₹${Math.round(r.rem).toLocaleString('en-IN')}</td><td>₹${Math.round(r.gain).toLocaleString('en-IN')}</td></tr>`; });
+    html += '</tbody></table>';
+    yearTable.innerHTML = html;
+  }
+
+  // event handlers
+  function onRangeChange(e){
+    const r = e.currentTarget;
+    updateRangeBackground(r);
+    if(r === lumpRange) lumpSum.value = r.value;
+    if(r === withdrawRange) withdrawal.value = r.value;
+    if(r === returnRange) swpReturn.value = r.value;
+    if(r === durRange) duration.value = r.value;
+    calculate();
+    showHideResetForPlanner('swp');
+  }
+
+  enableRangePainting(lumpRange, onRangeChange);
+  enableRangePainting(withdrawRange, onRangeChange);
+  enableRangePainting(returnRange, onRangeChange);
+  enableRangePainting(durRange, onRangeChange);
+
+  [lumpSum, withdrawal, swpReturn, duration].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if(el===lumpSum) lumpRange.value = el.value || defaults.lump;
+      if(el===withdrawal) withdrawRange.value = el.value || defaults.withdraw;
+      if(el===swpReturn) returnRange.value = el.value || defaults.ret;
+      if(el===duration) durRange.value = el.value || defaults.dur;
+      document.querySelectorAll('#swp .range').forEach(updateRangeBackground);
+      calculate();
+      showHideResetForPlanner('swp');
+    });
+  });
+
+  resetBtn && resetBtn.addEventListener('click', ()=>{
+    lumpSum.value = defaults.lump; withdrawal.value = defaults.withdraw; swpReturn.value = defaults.ret; duration.value = defaults.dur;
+    lumpRange.value = defaults.lump; withdrawRange.value = defaults.withdraw; returnRange.value = defaults.ret; durRange.value = defaults.dur;
+    document.querySelectorAll('#swp .range').forEach(updateRangeBackground);
+    calculate(); showHideResetForPlanner('swp');
+  });
+
+  document.getElementById('swp-year').innerText = new Date().getFullYear();
+  document.querySelectorAll('#swp .range').forEach(updateRangeBackground);
+  calculate();
+})();
+
+/* -----------------------
+   Lump Sum namespace (lump-*)
+   ----------------------- */
+(function(){
+  const $ = id => document.getElementById('lump-' + id);
+  const amount = $('amount'), amountRange = $('amountRange');
+  const rate = $('rate'), rateRange = $('rateRange');
+  const years = $('years'), yearsRange = $('yearsRange');
+  const result = document.getElementById('lump-lumpResult');
+  const yearTable = document.getElementById('lump-lumpYearTable');
+  const resetBtn = $('resetBtn');
+
+  const defaults = { amount:100000, rate:12, years:10 };
+
+  const ctx = document.getElementById('lump-lumpChart').getContext('2d');
+  const chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Invested','Returns'], datasets:[{ data:[0,0], backgroundColor:['#2e7d32','#9ccc65'], borderWidth:0 }] }, options:{ cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:true}}, maintainAspectRatio:false } });
+
+  function calcLumpSum(){
+    const P = toNum(amount.value,0), r = toNum(rate.value,0)/100, n = parseInt(toNum(years.value,0),10);
+    const FV = Math.round(P * Math.pow(1 + r, n));
+    const gain = Math.round(FV - P);
+    result.innerHTML = `
+      <div class="result-row">Invested Amount: <span class="value">${fmtINR(P)}</span></div>
+      <div class="result-row">Estimated Returns: <span class="value">${fmtINR(gain)}</span></div>
+      <div class="result-row" style="border-bottom:none;">Maturity Value: <span class="value">${fmtINR(FV)}</span></div>
+    `;
+    chart.data.datasets[0].data = [P, gain]; chart.update();
+    const center = document.getElementById('lump-chartCenter');
+    if(center) center.innerHTML = `<span class="label">Maturity Value</span>${fmtINR(FV)}`;
+
+    let rows = '<table><thead><tr><th>Year</th><th>Invested (₹)</th><th>Future Value (₹)</th><th>Gain (₹)</th></tr></thead><tbody>';
+    for(let y=1;y<=n;y++){
+      const fvY = Math.round(P * Math.pow(1 + r, y));
+      const gY = Math.round(fvY - P);
+      rows += `<tr><td>${y}</td><td>${P.toLocaleString('en-IN')}</td><td>${fvY.toLocaleString('en-IN')}</td><td>${gY.toLocaleString('en-IN')}</td></tr>`;
+    }
+    rows += '</tbody></table>';
+    yearTable.innerHTML = rows;
+  }
+
+  function onRangeChange(e){
+    const r = e.currentTarget; updateRangeBackground(r);
+    if(r===amountRange) amount.value = r.value;
+    if(r===rateRange) rate.value = r.value;
+    if(r===yearsRange) years.value = r.value;
+    calcLumpSum();
+    showHideResetForPlanner('lump');
+  }
+
+  enableRangePainting(amountRange, onRangeChange);
+  enableRangePainting(rateRange, onRangeChange);
+  enableRangePainting(yearsRange, onRangeChange);
+
+  [amount,rate,years].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if(el===amount) amountRange.value = el.value;
+      if(el===rate) rateRange.value = el.value;
+      if(el===years) yearsRange.value = el.value;
+      document.querySelectorAll('#lump .range').forEach(updateRangeBackground);
+      calcLumpSum();
+      showHideResetForPlanner('lump');
+    });
+  });
+
+  resetBtn && resetBtn.addEventListener('click', ()=>{
+    amount.value = defaults.amount; rate.value = defaults.rate; years.value = defaults.years;
+    amountRange.value = defaults.amount; rateRange.value = defaults.rate; yearsRange.value = defaults.years;
+    document.querySelectorAll('#lump .range').forEach(updateRangeBackground);
+    calcLumpSum(); showHideResetForPlanner('lump');
+  });
+
+  document.getElementById('lump-year').innerText = new Date().getFullYear();
+  document.querySelectorAll('#lump .range').forEach(updateRangeBackground);
+  calcLumpSum();
+})();
+
+/* -----------------------
+   Goal namespace (goal-*)
+   ----------------------- */
+(function(){
+  const G = id => document.getElementById('goal-' + id);
+  const goalAmount = G('goalAmount'), goalRange = G('goalRange');
+  const yearsLeft = G('yearsLeft'), yearsRange = G('yearsRange');
+  const expectedReturn = G('expectedReturn'), returnRange = G('returnRange');
+  const stepup = G('stepup'), stepupRange = G('stepupRange');
+  const monthlySIPEl = document.getElementById('goal-monthlySIP'), totalInvestedEl = document.getElementById('goal-totalInvested'), wealthCreatedEl = document.getElementById('goal-wealthCreated'), centerVal = document.getElementById('goal-centerVal');
+  const yearTable = document.getElementById('goal-yearTable'), resetBtn = G('resetBtn');
+
+  const defaults = { goal:5000000, yrs:20, ret:12, step:0 };
+
+  const ctx = document.getElementById('goal-goalChart').getContext('2d');
+  const chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Invested','Gain'], datasets:[{ data:[0,0], backgroundColor:['#2e7d32','#9ccc65'], borderColor:'#fff', borderWidth:2 }] }, options:{ cutout:'70%', plugins:{legend:{display:false}}, maintainAspectRatio:false } });
+
+  function calculateAndRender(){
+    const goal = Math.max(0, toNum(goalAmount.value,0)), yrs = Math.max(1, Math.floor(toNum(yearsLeft.value,1)));
+    const annual = Math.max(0, toNum(expectedReturn.value,0))/100, monthlyRate = annual/12, months = yrs*12, stepPercent = Math.max(0, toNum(stepup.value,0))/100;
+    // required monthly SIP without step-up (standard formula)
+    let monthlyInvestment = 0;
+    if(monthlyRate === 0) monthlyInvestment = goal / months;
+    else monthlyInvestment = goal * (monthlyRate) / (Math.pow(1+monthlyRate, months) - 1);
+
+    // If step-up > 0, approximate by increasing monthly each year
+    let monthly = monthlyInvestment, investedTotal = 0, future = 0, table = [];
+    for(let y=1;y<=yrs;y++){
+      for(let m=1;m<=12;m++){
+        future = (future + monthly) * (1 + monthlyRate);
+        investedTotal += monthly;
+      }
+      table.push({ year:y, invested: Math.round(investedTotal), future: Math.round(future), gain: Math.round(future - investedTotal) });
+      monthly *= (1 + stepPercent);
+    }
+    const wealthCreated = future - investedTotal;
+    monthlySIPEl.textContent = fmtINR(monthlyInvestment);
+    totalInvestedEl.textContent = fmtINR(investedTotal);
+    wealthCreatedEl.textContent = fmtINR(wealthCreated);
+    centerVal.textContent = fmtINR(goal);
+    chart.data.datasets[0].data = [investedTotal, Math.max(0, wealthCreated)]; chart.update();
+
+    let html = '<table><thead><tr><th>Year</th><th>Invested (₹)</th><th>Projected Value (₹)</th><th>Gain (₹)</th></tr></thead><tbody>';
+    for(const r of table) html += `<tr><td>${r.year}</td><td>${r.invested.toLocaleString('en-IN')}</td><td>${r.future.toLocaleString('en-IN')}</td><td>${r.gain.toLocaleString('en-IN')}</td></tr>`;
+    html += '</tbody></table>';
+    yearTable.innerHTML = html;
+  }
+
+  function onRangeChange(e){
+    const r = e.currentTarget; updateRangeBackground(r);
+    if(r===goalRange) goalAmount.value = r.value;
+    if(r===yearsRange) yearsLeft.value = r.value;
+    if(r===returnRange) expectedReturn.value = r.value;
+    if(r===stepupRange) stepup.value = r.value;
+    calculateAndRender(); showHideResetForPlanner('goal');
+  }
+
+  enableRangePainting(goalRange, onRangeChange);
+  enableRangePainting(yearsRange, onRangeChange);
+  enableRangePainting(returnRange, onRangeChange);
+  enableRangePainting(stepupRange, onRangeChange);
+
+  [goalAmount, yearsLeft, expectedReturn, stepup].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if(el===goalAmount) goalRange.value = el.value;
+      if(el===yearsLeft) yearsRange.value = el.value;
+      if(el===expectedReturn) returnRange.value = el.value;
+      if(el===stepup) stepupRange.value = el.value;
+      document.querySelectorAll('#goal .range').forEach(updateRangeBackground);
+      calculateAndRender(); showHideResetForPlanner('goal');
+    });
+  });
+
+  resetBtn && resetBtn.addEventListener('click', ()=>{
+    goalAmount.value = defaults.goal; yearsLeft.value = defaults.yrs; expectedReturn.value = defaults.ret; stepup.value = defaults.step;
+    goalRange.value = defaults.goal; yearsRange.value = defaults.yrs; returnRange.value = defaults.ret; stepupRange.value = defaults.step;
+    document.querySelectorAll('#goal .range').forEach(updateRangeBackground);
+    calculateAndRender(); showHideResetForPlanner('goal');
+  });
+
+  document.getElementById('goal-year').innerText = new Date().getFullYear();
+  document.querySelectorAll('#goal .range').forEach(updateRangeBackground);
+  calculateAndRender();
+})();
+
+/* -----------------------
+   Reset-button behaviour (common)
+   - Capture initial snapshot for each planner on load
+   - Show reset only when current values differ from snapshot
+   ----------------------- */
+
+const plannerSnapshots = {}; // will hold initial values for each planner
+
+function snapshotPlanner(plannerId, selectors){
+  const snap = {};
+  selectors.forEach(sel=>{
+    const el = document.querySelector(sel);
+    if(el) snap[sel] = el.value;
+  });
+  plannerSnapshots[plannerId] = snap;
+}
+
+function plannerHasChanges(plannerId){
+  const snap = plannerSnapshots[plannerId];
+  if(!snap) return false;
+  for(const sel in snap){
+    const el = document.querySelector(sel);
+    if(!el) continue;
+    const vNow = el.value;
+    const vThen = snap[sel];
+    if(String(vNow) !== String(vThen)) return true;
+  }
+  return false;
+}
+
+function showHideResetForPlanner(plannerId){
+  const map = {
+    'sip': { resetSelector: '#sip-resetBtn', selectors: ['#sip-sipAmount','#sip-years','#sip-rate','#sip-stepup','#sip-sipRange','#sip-yearsRange','#sip-rateRange','#sip-stepupRange'] },
+    'swp': { resetSelector: '#swp-resetBtn', selectors: ['#swp-lumpSum','#swp-withdrawal','#swp-swpReturn','#swp-duration','#swp-lumpRange','#swp-withdrawRange','#swp-returnRange','#swp-durRange'] },
+    'lump': { resetSelector: '#lump-resetBtn', selectors: ['#lump-amount','#lump-rate','#lump-years','#lump-amountRange','#lump-rateRange','#lump-yearsRange'] },
+    'goal': { resetSelector: '#goal-resetBtn', selectors: ['#goal-goalAmount','#goal-yearsLeft','#goal-expectedReturn','#goal-stepup','#goal-goalRange','#goal-yearsRange','#goal-returnRange','#goal-stepupRange'] }
+  };
+  const cfg = map[plannerId];
+  if(!cfg) return;
+  const btn = document.querySelector(cfg.resetSelector);
+  if(!btn) return;
+  const changed = plannerHasChanges(plannerId);
+  btn.style.display = changed ? 'inline-block' : 'none';
+}
+
+/* -----------------------
+   Take snapshots ONCE after DOM ready and initialise Reset visibility
+   ----------------------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  snapshotPlanner('sip', ['#sip-sipAmount','#sip-years','#sip-rate','#sip-stepup','#sip-sipRange','#sip-yearsRange','#sip-rateRange','#sip-stepupRange']);
+  snapshotPlanner('swp', ['#swp-lumpSum','#swp-withdrawal','#swp-swpReturn','#swp-duration','#swp-lumpRange','#swp-withdrawRange','#swp-returnRange','#swp-durRange']);
+  snapshotPlanner('lump', ['#lump-amount','#lump-rate','#lump-years','#lump-amountRange','#lump-rateRange','#lump-yearsRange']);
+  snapshotPlanner('goal', ['#goal-goalAmount','#goal-yearsLeft','#goal-expectedReturn','#goal-stepup','#goal-goalRange','#goal-yearsRange','#goal-returnRange','#goal-stepupRange']);
+
+  document.querySelectorAll('.reset-btn').forEach(b=>b.style.display='none');
+  document.querySelectorAll('.range').forEach(updateRangeBackground);
+});
+</script>
+</body>
+</html>
