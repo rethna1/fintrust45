@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" href="icon-192.png">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="manifest" href="manifest.json">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>FinTrust MF Calculators</title>
@@ -773,6 +778,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('.reset-btn').forEach(b=>b.style.display='none');
   document.querySelectorAll('.range').forEach(updateRangeBackground);
 });
+</script>
+  <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("Service Worker Registered"));
+}
 </script>
 </body>
 </html>
