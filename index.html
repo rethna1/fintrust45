@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" href="icon-192.png">
-
-<link rel="apple-touch-icon" href="icon-192.png">
-
-<link rel="manifest" href="manifest.json">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>FinTrust MF Calculators</title>
@@ -248,8 +243,8 @@
     <div class="fields">
       <div class="field">
         <label>Investment Amount (Lump Sum)</label>
-        <div class="input-group"><span>₹</span><input type="number" id="swp-lumpSum" value="1000000" min="0"/></div>
-        <input id="swp-lumpRange" class="range" type="range" min="10000" max="50000000" step="10000" value="1000000"/>
+        <div class="input-group"><span>₹</span><input type="number" id="swp-lumpSum" value="1500000" min="0"/></div>
+        <input id="swp-lumpRange" class="range" type="range" min="10000" max="50000000" step="10000" value="1500000"/>
       </div>
       <div class="field">
         <label>Monthly Withdrawal</label>
@@ -488,7 +483,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const yearTable = document.getElementById('swp-yearTable');
   const resetBtn = get('resetBtn');
 
-  const defaults = { lump:1000000, withdraw:10000, ret:10, dur:10 };
+  const defaults = { lump:1500000, withdraw:10000, ret:10, dur:10 };
 
   const ctx = document.getElementById('swp-swpChart').getContext('2d');
   const chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Withdrawn','Remaining'], datasets:[{ data:[0,0], backgroundColor:['#2e7d32','#9ccc65'], borderColor:'#fff', borderWidth:2 }] }, options:{ cutout:'70%', plugins:{legend:{display:false}}, maintainAspectRatio:false } });
@@ -778,12 +773,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('.reset-btn').forEach(b=>b.style.display='none');
   document.querySelectorAll('.range').forEach(updateRangeBackground);
 });
-</script>
-  <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
-    .then(() => console.log("Service Worker Registered"));
-}
 </script>
 </body>
 </html>
